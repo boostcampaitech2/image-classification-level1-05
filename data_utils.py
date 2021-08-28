@@ -1,42 +1,70 @@
-import os
+# System Libs.
+import random
 
+# Other Libs
+import pandas as pd
 import torch
 from torch.utils.data import Dataset
-
-import numpy as np
 from PIL import Image
 
+
 class MaskClassifierDataset(Dataset):
+
     def __init__(self, img_paths, labels, transform=None):
         self.img_paths = img_paths
         self.labels = labels
-    
         self.transform = transform
 
-    def __getitem__(self, index):
-        img = Image.open(self.img_paths[index])
-        if self.transform:
-            img = self.transform(img)
-        return img, torch.tensor(self.labels[index]).unsqueeze(dim=0)
-
     def __len__(self):
-        return len(self.labels)
+        return len(list(img_paths))
 
-def get_paths_and_labels(root_dir, meta_data):
-    img_paths = []
-    labels = []
-    label_dict = {'male': 0, 'female': 3}
-    for gender, age, img_dir_name in meta_data:
-        _label = label_dict[gender] + (age // 30)
-        for file_name in os.listdir(img_dir := os.path.join(root_dir, 'images', img_dir_name)):
-            if file_name.startswith('.'):
-                continue
-            label = _label
-            if file_name.startswith('incorrect'):
-                label += 6
-            elif file_name.startswith('normal'):
-                label += 12
-            img_paths.append(os.path.join(img_dir, file_name))
-            labels.append(label)
-    return img_paths, labels
+    def __getitem__(self, index):
+        image = Image.open(self.img_paths[index])
+        label = torch.tensor(self.labels[index])
 
+        if self.transform:
+            image = self.transform(image)
+
+        return (image, label)
+
+
+def train_test_split_df(data_df, crit_col='path', test_size=0.2, shuffle=True, random_state=None):
+    if random_state:
+        random.seed(random_state)
+
+    _idxs = set(data_df[crit_col].unique())
+    _size = len(_idxs)
+    _size_test = int(_size * test_size)
+
+    # Split DataFrame
+    test_idxs = set(random.sample(_idxs, _size_test))
+    test_df = data_df.loc[data_df[crit_col].isin(test_idxs)]
+
+    train_idxs = _idxs - test_idxs
+    train_df = data_df.loc[data_df[crit_col].isin(train_idxs)]
+
+    return (train_df, test_df)
+
+
+def dist_analysis(df_dict, col_list):
+    dist_list = []
+    for name, df in df_dict.items():
+        dist_df_list = []
+        for col in col_list:
+            # Dist. info
+            dist_count = pd.DataFrame(df[col].value_counts())
+            dist_count.columns = ['Count']
+            dist_ratio = pd.DataFrame(df[col].value_counts(True))
+            dist_ratio.columns = ['Ratio']
+
+            # Construct & append dataframe
+            _dist_df = pd.concat([dist_count, dist_ratio], axis=1)
+            _dist_df.index = pd.MultiIndex.from_product(
+                [[col], _dist_df.index])
+            dist_df_list.append(_dist_df)
+        dist_df = pd.concat(dist_df_list, axis=0)
+        dist_df.columns = pd.MultiIndex.from_product([[name], dist_df.columns])
+        dist_list.append(dist_df)
+    dist_info = pd.concat(dist_list, axis=1)
+
+    return dist_info

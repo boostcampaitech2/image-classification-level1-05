@@ -46,7 +46,7 @@ def train_test_split_df(data_df, crit_col='path', test_size=0.2, shuffle=True, r
     return (train_df, test_df)
 
 
-def dist_analysis(df_dict, col_list):
+def dist_analysis(df_dict, col_list=['Mask', 'Age', 'Gender']):
     dist_list = []
     for name, df in df_dict.items():
         dist_df_list = []

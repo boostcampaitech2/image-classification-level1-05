@@ -1,0 +1,9 @@
+train.py
+1. python train.py --mode [age]
+2. exp{number} 파일에 모델이 생성
+3. python train.py --mode [mask] --dump True --name exp{number} : 해당 agem 모델이 들어간 폴더 입력
+4. python train.py --mode [gender] --dump True --name exp{number} : 해당 agem 모델이 들어간 폴더 입력
+5. mask, age, gender 순서 무관
+
+inference.py
+1. python inference.py --mode ensemble --name [해당폴더]
